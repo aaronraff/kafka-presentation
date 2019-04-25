@@ -16,9 +16,10 @@ public class WordCount {
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 500);
 
         final StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> source = builder.stream("streams-plaintext-input");
+        KStream<String, String> source = builder.stream("streams-counts-input");
         KTable<String, Long> counts = source.groupBy(new KeyValueMapper<String, String, String>() {
             public String apply(String key, String val) {
                 return val;

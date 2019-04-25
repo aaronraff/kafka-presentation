@@ -19,7 +19,7 @@ public class Plural {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
         final StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> source = builder.stream("streams-plaintext-input");
+        KStream<String, String> source = builder.stream("streams-plural-input");
         source.mapValues(new ValueMapper<String, String>() {
             public String apply(String s) {
                 if(!s.endsWith("s"))
