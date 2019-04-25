@@ -10,15 +10,28 @@ import java.util.concurrent.CountDownLatch;
 public class AnomalyDetection {
 
     public static void main(String[] args) throws Exception {
+        // Some configuration
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-anomaly");
+
+        // Broker to connect to
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+
+        // Default Serializers and Deserializers
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+
+        // Commit interval for KTable, defauly is 1 minute
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, 500);
 
         final StreamsBuilder builder = new StreamsBuilder();
+
+        // Get input from stream-anomaly-input topic
         KStream<String, String> source = builder.stream("streams-anomaly-input");
+
+        // Window the stream and map it to make the value the key and value
+        // Then we group by the key (username) and window the stream
+        // Finally we count the occurrences insides this window and filter based on that count
         KTable<Windowed<String>, Long> purchases = source
             .map(new KeyValueMapper<String, String, KeyValue<String, String>>() {
                 public KeyValue<String, String> apply(String key, String username) {
@@ -34,6 +47,7 @@ public class AnomalyDetection {
             }
         });
 
+        // Make the output nicer for our Confluent console consumer
         KStream<String, Long> purchasesOutput = purchases
                 .toStream()
                 .map(new KeyValueMapper<Windowed<String>, Long, KeyValue<String, Long>>() {
@@ -46,14 +60,17 @@ public class AnomalyDetection {
                     }
                 });
 
+        // Write the records to streams-anomaly-output topic
         purchasesOutput.to("streams-anomaly-output", Produced.with(Serdes.String(), Serdes.Long()));
 
+        // Create the Processor topology
         final Topology topology = builder.build();
         System.out.println(topology.describe());
 
         final KafkaStreams streams = new KafkaStreams(topology, props);
         final CountDownLatch latch = new CountDownLatch(1);
 
+        // Handle Ctrl-C
         Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
             @Override
             public void run() {
@@ -62,6 +79,7 @@ public class AnomalyDetection {
             }
         });
 
+        // Start the stream processor and don't stop until interrupt
         try {
             streams.start();
             latch.await();
